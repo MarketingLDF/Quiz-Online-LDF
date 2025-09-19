@@ -1,0 +1,45 @@
+{
+ "title": "Quiz Farmacia Clinica e Uso dei Farmaci",
+ "questions": [
+  {
+   "question": "Qual è il principio attivo del farmaco Tachipirina?",
+   "a": "Ibuprofene",
+   "b": "Acido acetilsalicilico",
+   "c": "Paracetamolo",
+   "d": "Ketoprofene",
+   "correct": ["c"]
+  },
+  {
+   "question": "Quale tra i seguenti è un FANS (farmaco antinfiammatorio non steroideo)?",
+   "a": "Omeprazolo",
+   "b": "Ibuprofene",
+   "c": "Lansoprazolo",
+   "d": "Amoxicillina",
+   "correct": ["b"]
+  },
+  {
+   "question": "Quali di questi farmaci possono aumentare il rischio di ulcera gastrica? (risposta multipla)",
+   "a": "Ketoprofene",
+   "b": "Aspirina (acido acetilsalicilico)",
+   "c": "Pantoprazolo",
+   "d": "Naproxene",
+   "correct": ["a", "b", "d"]
+  },
+  {
+   "question": "L'omeprazolo è utilizzato principalmente per:",
+   "a": "Ridurre la produzione di acido gastrico",
+   "b": "Abbassare la pressione arteriosa",
+   "c": "Curare infezioni batteriche",
+   "d": "Alleviare dolori muscolari",
+   "correct": ["a"]
+  },
+  {
+   "question": "Quale antibiotico è comunemente usato contro infezioni delle vie urinarie?",
+   "a": "Fluoxetina",
+   "b": "Amoxicillina",
+   "c": "Paracetamolo",
+   "d": "Simvastatina",
+   "correct": ["b"]
+  }
+ ]
+}

@@ -1,0 +1,162 @@
+[
+  {
+    "question": "Al termine della fase di mantenimento un cliente, previo confronto con farmacista-nutrizionista può",
+    "a": "Tornare in fase 1/ricominciare il protocollo",
+    "b": "Estendere il mantenimento proposto",
+    "c": "Chiedere l’invio delle linee guida DietaLab a conclusione del percorso",
+    "d": "Tutte le risposte sono corrette",
+    "correct": [
+      "d"
+    ]
+  },
+  {
+    "question": "Clienti con intolleranza certificata al lattosio e alterazioni della funzionalità tiroidea",
+    "a": "Possono seguire un piano alimentare DietaLab escludendo le referenze a base di proteine del latte",
+    "b": "Possono seguire un piano alimentare DietaLab escludendo le referenze a base di proteine della soia",
+    "c": "Possono seguire un piano alimentare DietaLab",
+    "d": "Non possono seguire un piano alimentare DietaLab",
+    "correct": [
+      "a"
+    ]
+  },
+  {
+    "question": "Ogni quanto si effettua un controllo in farmacia con un cliente che sta seguendo un percorso DietaLab",
+    "a": "N 2 volte (fine fase 1 e fine fase 2)",
+    "b": "Una volta alla settimana",
+    "c": "Ogni qual volta il cliente entra in farmacia (e desidera essere rassicurato)",
+    "d": "Tutte le risposte sono corrette",
+    "correct": [
+      "d"
+    ]
+  },
+  {
+    "question": "Un percorso alimentare DietaLab può essere seguito da",
+    "a": "Soggetto con diabete di tipo 2 in terapia con insulina",
+    "b": "Soggetto affetto da morbo di Parkinson in terapia farmacologica",
+    "c": "Soggetto con iperuricemia",
+    "d": "Soggetto vegano (che esclude dalla propria alimentazione alimenti di origine animale)",
+    "correct": [
+      "a",
+      "b",
+      "c"
+    ]
+  },
+  {
+    "question": "Quando può essere utile proporre lo STARTER KIT o il protocollo DETOX",
+    "a": "Quando un cliente sta già seguendo un piano alimentare DietaLab personalizzato",
+    "b": "Dopo periodi di festa/festività che includono eccessi alimentari",
+    "c": "Quando un soggetto riferisce sintomi come stanchezza, gonfiore e pesantezza",
+    "d": "Tutte le risposte sono corrette",
+    "correct": [
+      "d"
+    ]
+  },
+  {
+    "question": "L’attiva Sole",
+    "a": "Contiene filtri solari quindi non è necessario applicare la protezione",
+    "b": "Si può utilizzare anche dopo l’esposizione solare",
+    "c": "Favorisce la comparsa di un’abbronzatura omogenea e luminosa grazie a pigmenti coloranti",
+    "d": "",
+    "correct": [
+      "a",
+      "b",
+      "c"
+    ]
+  },
+  {
+    "question": "Gli shampoo Tricolab non fanno tanta schiuma",
+    "a": "Perché sono ricchi di solfati",
+    "b": "Perché gli attivi all’interno riducono la formazione della schiuma",
+    "c": "Perché sono formulati con tensioattivi delicati adatti anche alla cute sensibile",
+    "d": "",
+    "correct": [
+      "b",
+      "c"
+    ]
+  },
+  {
+    "question": "Le fiale rinforzanti",
+    "a": "Sono senza risciacquo",
+    "b": "Si devono applicare tutti i giorni",
+    "c": "È necessario proseguire l’utilizzo al massimo per un mese",
+    "d": "",
+    "correct": [
+      "a"
+    ]
+  },
+  {
+    "question": "Crema antietà rassodante (Essenzia): indica le affermazioni corrette",
+    "a": "L’attivo principale è il Retinyl palmitate, la forma di retinoide più delicata sulla pelle",
+    "b": "Come tutte le creme a base di retinolo, è consigliabile utilizzarla solo per la notte",
+    "c": "Il tipo di retinoide al suo interno è già in forma attiva sulla pelle e non necessita di essere convertito in acido retinoico",
+    "d": "Nonostante la maggiore sicurezza del retinoide utilizzato, è sempre consigliabile applicare un fattore di protezione solare per il giorno",
+    "correct": [
+      "a",
+      "c",
+      "d"
+    ]
+  },
+  {
+    "question": "Fresh Garden Body Cream: quale affermazione è corretta",
+    "a": "Ha un’azione idratante ed elasticizzante ma non può essere utilizzata in gravidanza",
+    "b": "È particolarmente adatta alle pelli sensibili perché è senza profumo",
+    "c": "È a base di acido ialuronico a basso peso molecolare di nuova generazione che assicura idratazione profonda e prolungata",
+    "d": "Nessuna",
+    "correct": [
+      "c"
+    ]
+  },
+  {
+    "question": "In quale occasione è sconsigliato l’utilizzo del picrocardo come depurativo epatico",
+    "a": "Nei soggetti ipertesi",
+    "b": "In concomitanza a terapia anticoagulanti o antiaggreganti",
+    "c": "In soggetti che soffrono di calcoli biliari",
+    "d": "Nei casi di reflusso gastroesofageo",
+    "correct": [
+      "b"
+    ]
+  },
+  {
+    "question": "Con quale meccanismo d'azione agisce la sinefrina dell'arancio amaro",
+    "a": "Inibisce l'assorbimento dei glucidi",
+    "b": "Stimola la funzionalità tiroidea",
+    "c": "Interagisce con i recettori alfa adrenergici",
+    "d": "Chela le componenti lipidiche introdotte con l'alimentazione",
+    "correct": [
+      "c"
+    ]
+  },
+  {
+    "question": "In quale/i categorie di pazienti è sconsigliato l’uso dell’integratore Tricolab Uomo",
+    "a": "Donne in menopausa",
+    "b": "Ragazzi in età prepubere",
+    "c": "Soggetti ipertesi",
+    "d": "Donne in età fertile",
+    "correct": [
+      "b",
+      "c",
+      "d"
+    ]
+  },
+  {
+    "question": "Quale/i sono gli effetti del collagene idrolizzato",
+    "a": "Migliora l’elasticità della pelle",
+    "b": "Contrasta la cellulite",
+    "c": "Riduce la profondità delle rughe",
+    "d": "Tutte le precedenti",
+    "correct": [
+      "d"
+    ]
+  },
+  {
+    "question": "Quando va utilizzato l’integratore Solaire",
+    "a": "Solo durante l’esposizione al sole",
+    "b": "In alternativa alla crema solare",
+    "c": "Prima dell’esposizione al sole",
+    "d": "Dopo l’esposizione al sole per prolungare l’abbronzatura",
+    "correct": [
+      "c",
+      "d"
+    ]
+  }
+]
