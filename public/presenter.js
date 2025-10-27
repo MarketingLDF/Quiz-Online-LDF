@@ -9,6 +9,7 @@ document.addEventListener("DOMContentLoaded", () => {
  let questionDuration = 60;
  let currentSessionId = null;
  let questions = [];
+ let qrCodeInstance = null;
 
  function loadQuizList() {
   socket.emit("requestQuizList");
@@ -138,8 +139,8 @@ document.addEventListener("DOMContentLoaded", () => {
    .value.trim()
    .toUpperCase();
 
-  if (!/^[A-Z0-9]{8}$/.test(newCode)) {
-   alert("Il codice deve essere di 8 caratteri alfanumerici.");
+  if (!/^[A-Z0-9_-]+$/.test(newCode) || newCode.length === 0) {
+   alert("Il codice deve contenere solo caratteri alfanumerici, underscore (_) e trattini (-).");
    return;
   }
 
@@ -169,8 +170,8 @@ document.addEventListener("DOMContentLoaded", () => {
    .getElementById("codeDisplay")
    .value.trim()
    .toUpperCase();
-  if (!/^[A-Z0-9]{8}$/.test(code)) {
-   alert("Il codice deve essere di 8 caratteri alfanumerici.");
+  if (!/^[A-Z0-9_-]+$/.test(code) || code.length === 0) {
+   alert("Il codice deve contenere solo caratteri alfanumerici, underscore (_) e trattini (-).");
    return;
   }
 
@@ -235,6 +236,17 @@ document.addEventListener("DOMContentLoaded", () => {
   console.warn('Errore nel caricamento del suono della classifica:', e);
  });
 
+ // Funzione per auto-scroll verso i partecipanti
+ function smoothScrollToParticipants() {
+  const cloud = document.getElementById("participantsCloud");
+  if (cloud) {
+   cloud.scrollIntoView({
+    behavior: 'smooth',
+    block: 'center'
+   });
+  }
+ }
+
  // Riceve i partecipanti e li visualizza come bolle animate
  socket.on("participants", (participants) => {
   const newCount = participants.length;
@@ -252,6 +264,11 @@ document.addEventListener("DOMContentLoaded", () => {
     console.warn('Errore nella riproduzione del suono di ingresso:', e);
    }
    lastPlayTime = now;
+  }
+
+  // Auto-scroll per seguire i nuovi partecipanti
+  if (newCount > lastParticipantCount) {
+   smoothScrollToParticipants();
   }
 
   lastParticipantCount = newCount;
@@ -361,18 +378,52 @@ document.addEventListener("DOMContentLoaded", () => {
    b1.x += b1.vx;
    b1.y += b1.vy;
 
-   // Rimbalzo ai bordi
-   if (b1.x <= 0 || b1.x + b1.size * 2 >= width) b1.vx *= -1;
-   if (b1.y <= 0 || b1.y + b1.size * 2 >= height) b1.vy *= -1;
+   // Rimbalzo ai bordi con effetto elastico
+   if (b1.x <= 0) {
+    b1.x = 0;
+    b1.vx *= -0.8; // Riduce la velocità per effetto smorzamento
+   }
+   if (b1.x + b1.size * 2 >= width) {
+    b1.x = width - b1.size * 2;
+    b1.vx *= -0.8;
+   }
+   if (b1.y <= 0) {
+    b1.y = 0;
+    b1.vy *= -0.8;
+   }
+   if (b1.y + b1.size * 2 >= height) {
+    b1.y = height - b1.size * 2;
+    b1.vy *= -0.8;
+   }
 
-   // Collisioni tra bolle
+   // Collisioni tra bolle con fisica migliorata
    for (let j = i + 1; j < presenterBubbles.length; j++) {
     const b2 = presenterBubbles[j];
+
     const dx = b2.x - b1.x;
     const dy = b2.y - b1.y;
-    if (Math.hypot(dx, dy) < b1.size * 2) {
-     [b1.vx, b2.vx] = [b2.vx, b1.vx];
-     [b1.vy, b2.vy] = [b2.vy, b1.vy];
+    const distance = Math.hypot(dx, dy);
+    const minDistance = b1.size * 2;
+
+    if (distance < minDistance && distance > 0) {
+     // Calcola la sovrapposizione
+     const overlap = minDistance - distance;
+     const separationX = (dx / distance) * overlap * 0.5;
+     const separationY = (dy / distance) * overlap * 0.5;
+
+     // Separa le bolle
+     b1.x -= separationX;
+     b1.y -= separationY;
+     b2.x += separationX;
+     b2.y += separationY;
+
+     // Scambia velocità con smorzamento per effetto realistico
+     const tempVx = b1.vx;
+     const tempVy = b1.vy;
+     b1.vx = b2.vx * 0.9;
+     b1.vy = b2.vy * 0.9;
+     b2.vx = tempVx * 0.9;
+     b2.vy = tempVy * 0.9;
     }
    }
 
@@ -434,8 +485,8 @@ document.addEventListener("DOMContentLoaded", () => {
    .value.trim()
    .toUpperCase();
 
-  if (!/^[A-Z0-9]{8}$/.test(sessionId)) {
-   alert("Codice sessione non valido.");
+  if (!/^[A-Z0-9_-]+$/i.test(sessionId)) {
+   alert("Codice sessione non valido. Può contenere solo lettere, numeri, underscore e trattini.");
    return;
   }
 
@@ -823,4 +874,159 @@ document.addEventListener("DOMContentLoaded", () => {
    }
   });
  }
+
+ // ===== QR Code Functionality =====
+ 
+ // Show QR Code Modal
+ document.getElementById("showQRCode").addEventListener("click", () => {
+  if (!currentSessionId) {
+   alert("Nessuna sessione attiva. Crea prima una sessione.");
+   return;
+  }
+  
+  showQRCodeModal();
+ });
+
+ // Close QR Code Modal
+ document.getElementById("closeQRModal").addEventListener("click", () => {
+  hideQRCodeModal();
+ });
+
+ // Close modal when clicking outside
+ document.getElementById("qrModal").addEventListener("click", (e) => {
+  if (e.target.id === "qrModal") {
+   hideQRCodeModal();
+  }
+ });
+
+ // Show modal with high brightness by default
+ function showQRCodeModal() {
+  const modal = document.getElementById("qrModal");
+  const sessionCodeSpan = document.getElementById("qrSessionCode");
+  const sessionUrlSpan = document.getElementById("qrSessionUrl");
+  const qrContainer = document.getElementById("qrCodeContainer");
+  
+  // Set session information
+  sessionCodeSpan.textContent = currentSessionId;
+  const sessionUrl = `${window.location.origin}/quiz/waiting_room.html?sessionId=${currentSessionId}`;
+  sessionUrlSpan.textContent = sessionUrl;
+  
+  // Clear previous QR code
+  qrContainer.innerHTML = "";
+  
+  // Generate QR Code
+  try {
+   qrCodeInstance = new QRCode(qrContainer, {
+    text: sessionUrl,
+    width: 400,
+    height: 400,
+    colorDark: "#2c3e50",
+    colorLight: "#ffffff",
+    correctLevel: QRCode.CorrectLevel.H
+   });
+  } catch (error) {
+   console.error("Errore nella generazione del QR Code:", error);
+   qrContainer.innerHTML = `
+    <div style="padding: 2rem; color: #dc3545;">
+     <i class="bi bi-exclamation-triangle" style="font-size: 3rem;"></i>
+     <p>Errore nella generazione del QR Code</p>
+     <p style="font-size: 0.9rem;">Assicurati che la libreria QRCode.js sia caricata</p>
+    </div>
+   `;
+  }
+  
+  // Show modal with high brightness by default
+  modal.style.display = "flex";
+  modal.classList.add("brightness-high");
+  
+  // Add fade-in animation
+  setTimeout(() => {
+   modal.style.opacity = "1";
+  }, 10);
+ }
+
+ // Download QR Code
+ document.getElementById("downloadQR").addEventListener("click", () => {
+  if (qrCodeInstance) {
+   const canvas = document.querySelector("#qrCodeContainer canvas");
+   if (canvas) {
+    const link = document.createElement("a");
+    link.download = `QR-Code-Session-${currentSessionId}.png`;
+    link.href = canvas.toDataURL();
+    link.click();
+   }
+  }
+ });
+
+ function showQRCodeModal() {
+  const modal = document.getElementById("qrModal");
+  const sessionCodeSpan = document.getElementById("qrSessionCode");
+  const sessionUrlSpan = document.getElementById("qrSessionUrl");
+  const qrContainer = document.getElementById("qrCodeContainer");
+  
+  // Set session information
+  sessionCodeSpan.textContent = currentSessionId;
+  const sessionUrl = `${window.location.origin}/quiz/waiting_room.html?sessionId=${currentSessionId}`;
+  sessionUrlSpan.textContent = sessionUrl;
+  
+  // Clear previous QR code
+  qrContainer.innerHTML = "";
+  
+  // Generate QR Code
+  try {
+   qrCodeInstance = new QRCode(qrContainer, {
+    text: sessionUrl,
+    width: 400,
+    height: 400,
+    colorDark: "#2c3e50",
+    colorLight: "#ffffff",
+    correctLevel: QRCode.CorrectLevel.H
+   });
+  } catch (error) {
+   console.error("Errore nella generazione del QR Code:", error);
+   qrContainer.innerHTML = `
+    <div style="padding: 2rem; color: #dc3545;">
+     <i class="bi bi-exclamation-triangle" style="font-size: 3rem;"></i>
+     <p>Errore nella generazione del QR Code</p>
+     <p style="font-size: 0.9rem;">Assicurati che la libreria QRCode.js sia caricata</p>
+    </div>
+   `;
+  }
+  
+  // Show modal with high brightness by default
+  modal.style.display = "flex";
+  modal.classList.add("brightness-high");
+  
+  // Add fade-in animation
+  setTimeout(() => {
+   modal.style.opacity = "1";
+  }, 10);
+ }
+
+ function hideQRCodeModal() {
+  const modal = document.getElementById("qrModal");
+  
+  // Add fade-out animation
+  modal.style.opacity = "0";
+  
+  setTimeout(() => {
+   modal.style.display = "none";
+   modal.classList.remove("brightness-high");
+   
+   // Clear QR code instance
+   qrCodeInstance = null;
+  }, 300);
+ }
+
+ // Keyboard shortcuts for QR modal
+ document.addEventListener("keydown", (e) => {
+  const modal = document.getElementById("qrModal");
+  if (modal.style.display === "flex") {
+   if (e.key === "Escape") {
+    hideQRCodeModal();
+   } else if (e.key === "d" || e.key === "D") {
+    document.getElementById("downloadQR").click();
+   }
+  }
+ });
 });

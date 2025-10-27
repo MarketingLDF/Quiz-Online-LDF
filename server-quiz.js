@@ -34,6 +34,130 @@ let sessions = {};
 let scoreModePerSession = {};
 let selectedQuizFile = {}; // sessionId -> filename
 
+// Sistema di pulizia sessioni - configurazione
+const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minuti in millisecondi
+const CLEANUP_INTERVAL = 5 * 60 * 1000; // Controllo ogni 5 minuti
+let sessionLastActivity = {}; // sessionId -> timestamp ultima attività
+
+// Funzione per aggiornare l'ultima attività di una sessione
+function updateSessionActivity(sessionId) {
+  if (sessions[sessionId]) {
+    sessionLastActivity[sessionId] = Date.now();
+  }
+}
+
+// Funzione per pulire le sessioni inattive
+function cleanupInactiveSessions() {
+  const now = Date.now();
+  const sessionsToDelete = [];
+  
+  for (const sessionId in sessions) {
+    const lastActivity = sessionLastActivity[sessionId] || 0;
+    const timeSinceLastActivity = now - lastActivity;
+    
+    // Se la sessione è inattiva da più del timeout configurato
+    if (timeSinceLastActivity > SESSION_TIMEOUT) {
+      sessionsToDelete.push(sessionId);
+    }
+  }
+  
+  // Rimuovi le sessioni inattive
+  sessionsToDelete.forEach(sessionId => {
+    const session = sessions[sessionId];
+    const participantCount = session ? session.participants.length : 0;
+    
+    // Pulisci tutti i dati associati alla sessione
+    delete sessions[sessionId];
+    delete scoreModePerSession[sessionId];
+    delete selectedQuizFile[sessionId];
+    delete questionDurationPerSession[sessionId];
+    delete sessionLastActivity[sessionId];
+    
+    log(`Sessione inattiva rimossa: ${sessionId} (${participantCount} partecipanti, inattiva da ${Math.round(timeSinceLastActivity / 60000)} minuti)`);
+  });
+  
+  if (sessionsToDelete.length > 0) {
+    log(`Pulizia completata: ${sessionsToDelete.length} sessioni rimosse`);
+  }
+}
+
+// Avvia il timer per la pulizia automatica delle sessioni
+setInterval(cleanupInactiveSessions, CLEANUP_INTERVAL);
+log(`Sistema di pulizia sessioni avviato: timeout ${SESSION_TIMEOUT/60000} minuti, controllo ogni ${CLEANUP_INTERVAL/60000} minuti`);
+
+// Sistema di validazione degli input
+function validateSessionId(sessionId) {
+  if (!sessionId || typeof sessionId !== 'string') {
+    return { valid: false, error: 'ID sessione mancante o non valido' };
+  }
+  
+  // Rimuovo i vincoli di lunghezza - ora accetta da 1 carattere a illimitato
+  if (sessionId.length < 1) {
+    return { valid: false, error: 'ID sessione non può essere vuoto' };
+  }
+  
+  if (!/^[a-zA-Z0-9_-]+$/.test(sessionId)) {
+    return { valid: false, error: 'ID sessione può contenere solo lettere, numeri, underscore e trattini' };
+  }
+  
+  return { valid: true };
+}
+
+function validateParticipantName(name) {
+  if (!name || typeof name !== 'string') {
+    return { valid: false, error: 'Nome partecipante mancante o non valido' };
+  }
+  
+  const trimmedName = name.trim();
+  if (trimmedName.length < 2 || trimmedName.length > 30) {
+    return { valid: false, error: 'Nome partecipante deve essere tra 2 e 30 caratteri' };
+  }
+  
+  if (!/^[a-zA-Z0-9\s\u00C0-\u017F_-]+$/.test(trimmedName)) {
+    return { valid: false, error: 'Nome partecipante contiene caratteri non validi' };
+  }
+  
+  return { valid: true, sanitized: trimmedName };
+}
+
+function validateQuestionDuration(duration) {
+  const numDuration = parseInt(duration);
+  if (isNaN(numDuration) || numDuration < 5 || numDuration > 300) {
+    return { valid: false, error: 'Durata domanda deve essere tra 5 e 300 secondi' };
+  }
+  
+  return { valid: true, sanitized: numDuration };
+}
+
+function validateScoreMode(mode) {
+  if (!mode || typeof mode !== 'string') {
+    return { valid: false, error: 'Modalità punteggio mancante' };
+  }
+  
+  const validModes = ['completo', 'parziale'];
+  if (!validModes.includes(mode)) {
+    return { valid: false, error: 'Modalità punteggio non valida' };
+  }
+  
+  return { valid: true, sanitized: mode };
+}
+
+function validateFilename(filename) {
+  if (!filename || typeof filename !== 'string') {
+    return { valid: false, error: 'Nome file mancante' };
+  }
+  
+  if (!/^[a-zA-Z0-9_-]+\.json$/.test(filename)) {
+    return { valid: false, error: 'Nome file non valido (solo lettere, numeri, underscore, trattini e estensione .json)' };
+  }
+  
+  if (filename.length > 100) {
+    return { valid: false, error: 'Nome file troppo lungo (max 100 caratteri)' };
+  }
+  
+  return { valid: true, sanitized: filename };
+}
+
 // Carica lista quiz disponibili
 function getAvailableQuizzes() {
  const dir = "./quizzes";
@@ -61,6 +185,14 @@ io.on("connection", (socket) => {
 
  // Evento per la creazione di una nuova sessione
  socket.on("createSession", (sessionId) => {
+  // Validazione input
+  const validation = validateSessionId(sessionId);
+  if (!validation.valid) {
+   socket.emit("sessionError", validation.error);
+   log(`Errore validazione sessione: ${validation.error} - Input: ${sessionId}`);
+   return;
+  }
+
   // Se la sessione esiste già, invia errore
   if (sessions[sessionId]) {
    socket.emit("sessionError", "Sessione già esistente");
@@ -77,6 +209,9 @@ io.on("connection", (socket) => {
    quiz: [],
   };
 
+  // Aggiorna l'attività della sessione
+  updateSessionActivity(sessionId);
+
   // Aggiunge il presentatore alla stanza e notifica la creazione
   socket.join(sessionId);
   socket.emit("sessionCreated", sessionId);
@@ -84,8 +219,22 @@ io.on("connection", (socket) => {
  });
 
  socket.on("setQuestionDuration", ({ sessionId, duration }) => {
+  // Validazione input
+  const sessionValidation = validateSessionId(sessionId);
+  if (!sessionValidation.valid) {
+   socket.emit("error", sessionValidation.error);
+   return;
+  }
+
+  const durationValidation = validateQuestionDuration(duration);
+  if (!durationValidation.valid) {
+   socket.emit("error", durationValidation.error);
+   return;
+  }
+
   if (sessions[sessionId]) {
-   questionDurationPerSession[sessionId] = parseInt(duration) || 60;
+   questionDurationPerSession[sessionId] = durationValidation.sanitized;
+   updateSessionActivity(sessionId);
   }
  });
 
@@ -114,16 +263,42 @@ io.on("connection", (socket) => {
 
  // Evento per la registrazione di un partecipante a una sessione
  socket.on("register", (name, sessionId) => {
-  if (!sessions[sessionId]) return;
+  // Validazione input
+  const sessionValidation = validateSessionId(sessionId);
+  if (!sessionValidation.valid) {
+   socket.emit("error", sessionValidation.error);
+   return;
+  }
 
-  const user = { id: socket.id, name };
+  const nameValidation = validateParticipantName(name);
+  if (!nameValidation.valid) {
+   socket.emit("error", nameValidation.error);
+   return;
+  }
+
+  if (!sessions[sessionId]) {
+   socket.emit("error", "Sessione non trovata");
+   return;
+  }
+
+  // Controlla se il nome è già in uso nella sessione
+  const existingParticipant = sessions[sessionId].participants.find(p => p.name.toLowerCase() === nameValidation.sanitized.toLowerCase());
+  if (existingParticipant) {
+   socket.emit("error", "Nome già in uso in questa sessione");
+   return;
+  }
+
+  const user = { id: socket.id, name: nameValidation.sanitized };
   sessions[sessionId].participants.push(user);
   sessions[sessionId].scores[socket.id] = 0;
   socket.join(sessionId);
 
+  // Aggiorna l'attività della sessione
+  updateSessionActivity(sessionId);
+
   // Notifica a tutti i partecipanti l'elenco aggiornato
   io.to(sessionId).emit("participants", sessions[sessionId].participants);
-  log(`Utente ${name} registrato nella sessione ${sessionId}`);
+  log(`Utente ${nameValidation.sanitized} registrato nella sessione ${sessionId}`);
 
   // Se il quiz è già in corso, invia subito i dati al nuovo partecipante
   const quiz = sessions[sessionId].quiz;
@@ -148,8 +323,22 @@ io.on("connection", (socket) => {
  });
 
  socket.on("selectQuiz", ({ sessionId, filename }) => {
+  // Validazione input
+  const sessionValidation = validateSessionId(sessionId);
+  if (!sessionValidation.valid) {
+   socket.emit("error", sessionValidation.error);
+   return;
+  }
+
+  const filenameValidation = validateFilename(filename);
+  if (!filenameValidation.valid) {
+   socket.emit("error", filenameValidation.error);
+   return;
+  }
+
   if (sessions[sessionId]) {
-   selectedQuizFile[sessionId] = filename;
+   selectedQuizFile[sessionId] = filenameValidation.sanitized;
+   updateSessionActivity(sessionId);
   }
  });
 
@@ -157,6 +346,7 @@ io.on("connection", (socket) => {
  socket.on("joinPresenter", (sessionId) => {
   if (sessions[sessionId]) {
    socket.join(sessionId);
+   updateSessionActivity(sessionId);
    socket.emit("sessionCreated", sessionId);
    io.to(sessionId).emit("participants", sessions[sessionId].participants);
   } else {
@@ -165,15 +355,33 @@ io.on("connection", (socket) => {
  });
 
  socket.on("setScoreMode", ({ sessionId, mode }) => {
-  if (!sessions[sessionId]) return;
-  scoreModePerSession[sessionId] =
-   mode === "parziale" ? "parziale" : "completo";
+  // Validazione input
+  const sessionValidation = validateSessionId(sessionId);
+  if (!sessionValidation.valid) {
+   socket.emit("error", sessionValidation.error);
+   return;
+  }
+
+  const modeValidation = validateScoreMode(mode);
+  if (!modeValidation.valid) {
+   socket.emit("error", modeValidation.error);
+   return;
+  }
+
+  if (!sessions[sessionId]) {
+   socket.emit("error", "Sessione non trovata");
+   return;
+  }
+
+  scoreModePerSession[sessionId] = modeValidation.sanitized;
+  updateSessionActivity(sessionId);
  });
 
  // Evento per l'avvio del quiz da parte del presentatore
  socket.on("startQuiz", (sessionId) => {
   if (!sessions[sessionId]) return;
 
+  updateSessionActivity(sessionId);
   const quizFile = selectedQuizFile[sessionId] || "quiz.json";
   const fullPath = path.join("./quizzes", quizFile);
 
@@ -215,6 +423,7 @@ io.on("connection", (socket) => {
   const session = sessions[sessionId];
   if (!session) return;
 
+  updateSessionActivity(sessionId);
   const index = session.currentQuestion;
 
   // Se abbiamo finito le domande, termina il quiz
@@ -231,6 +440,9 @@ io.on("connection", (socket) => {
 
  // Forza la fine del tempo per tutti i partecipanti
  socket.on("endTime", (sessionId) => {
+  if (!sessions[sessionId]) return;
+
+  updateSessionActivity(sessionId);
   io.to(sessionId).emit("forceDisable");
   log(`Timer scaduto nella sessione ${sessionId}`);
  });
@@ -279,6 +491,8 @@ io.on("connection", (socket) => {
  socket.on("showRanking", (sessionId) => {
   const session = sessions[sessionId];
   if (!session) return;
+
+  updateSessionActivity(sessionId);
 
   // Costruisce la classifica ordinata
   const ranking = session.participants

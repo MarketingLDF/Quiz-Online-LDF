@@ -20,6 +20,7 @@
    rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
  </head>
  <body>
   <div class="text-center my-3">
@@ -38,7 +39,7 @@
   <div id="createSessionModal" class="modal-overlay">
    <div class="modal-content" id="modalContent">
     <h2 class="modal-title mb-3">
-     <i class="bi bi-gear-fill"></i> Configurazione Sessione
+     Configurazione Sessione
     </h2>
     <div id="sessionLink" style="display: block">
      <div class="d-flex gap-2 mb-4 mt-2">
@@ -103,6 +104,10 @@
        <i class="bi bi-plus-lg"></i> <br />Nuova Sessione
       </button>
 
+      <button id="showQRCode" class="btn btn-outline-info btn-sm">
+       <i class="bi bi-qr-code"></i> <br />Mostra QR
+      </button>
+
       <button id="recoverCode" class="btn btn-outline-primary btn-sm">
        <i class="bi bi-arrow-repeat"></i><br />
        Recupera Sessione
@@ -130,9 +135,35 @@
 </div>
 
    </div>
-  </div>
+ </div>
 
-  <div class="container quiz-container text-center">
+ <!-- QR Code Modal -->
+ <div id="qrModal" class="qr-modal-overlay">
+  <div class="qr-modal-content">
+   <div class="qr-header">
+    <h2>Codice QR per Partecipare</h2>
+    <button id="closeQRModal" class="btn-close-qr">
+     <i class="bi bi-x-lg"></i>
+    </button>
+   </div>
+   <div class="qr-body">
+    <div id="qrCodeContainer" class="qr-code-container">
+     <!-- QR Code will be generated here -->
+    </div>
+    <div class="qr-info">
+     <p class="session-code">Codice Sessione: <span id="qrSessionCode"></span></p>
+     <p class="session-url"><span id="qrSessionUrl"></span></p>
+    </div>
+    <div class="qr-controls">
+      <button id="downloadQR" class="btn btn-outline-light">
+       <i class="bi bi-download"></i> Scarica QR
+      </button>
+     </div>
+   </div>
+  </div>
+ </div>
+
+ <div class="container quiz-container text-center">
    <div id="errorMessage" class="alert alert-danger" style="display: none" role="alert">
     <i class="bi bi-exclamation-triangle-fill me-2"></i>
     <span id="errorText">Si è verificato un errore</span>

@@ -4,8 +4,8 @@
  "description": "Applicazione per quiz in tempo reale con supporto per sessioni, partecipanti, punteggi e logging automatico.",
  "main": "server-quiz.js",
  "scripts": {
-  "start": "node server.js",
-  "dev": "nodemon server.js"
+  "start": "node server-quiz.js",
+  "dev": "nodemon server-quiz.js"
  },
  "author": "Dario Stevanato",
  "license": "ISC",
