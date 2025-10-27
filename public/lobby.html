@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="it">
+ <head>
+  <meta charset="UTF-8" />
+  <title>Lobby - Iscrizione</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link
+   rel="icon"
+   type="image/png"
+   sizes="32x32"
+   href="media/favicon-32x32.png" />
+  <link rel="stylesheet" href="style.css" />
+  <link
+   rel="stylesheet"
+   href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" />
+  <link
+   rel="stylesheet"
+   href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" />
+  <link rel="stylesheet" href="style.css" />
+ </head>
+ <body>
+  <div class="text-center my-3">
+   <img
+    src="https://www.laboratoriodellafarmacia.it/build/images/logo/logo_laboratorio.3ef25cbe.svg"
+    alt="Laboratorio della Farmacia"
+    style="max-width: 150px" />
+  </div>
+  <div class="container quiz-container text-center px-4">
+   <h2 class="lobby-title">Partecipa al Quiz</h2>
+   <div id="sessionInfo" class="session-info">Sessione: ???</div>
+   <input
+    type="text"
+    id="name"
+    class="form-control mb-3"
+    placeholder="Il tuo nome"
+    autocomplete="off" />
+   <button id="join" class="btn btn-primary">
+    <i class="bi bi-box-arrow-in-right"></i> Partecipa!
+   </button>
+  </div>
+
+  <script>
+   const nameInput = document.getElementById("name");
+   const sessionInfo = document.getElementById("sessionInfo");
+   const joinButton = document.getElementById("join");
+
+   const url = new URL(window.location.href);
+   const sessionId = url.searchParams.get("sessionId");
+
+   if (sessionId) {
+    sessionInfo.textContent = `Sessione: ${sessionId.toUpperCase()}`;
+   } else {
+    sessionInfo.textContent = "Sessione non trovata";
+    joinButton.disabled = true;
+    nameInput.disabled = true;
+   }
+
+   // Gestione tasto Invio
+   nameInput.addEventListener("keypress", function (event) {
+    if (event.key === "Enter") {
+     event.preventDefault();
+     joinButton.click();
+    }
+   });
+
+   // Gestione click pulsante
+   joinButton.addEventListener("click", () => {
+    const name = nameInput.value.trim().toUpperCase();
+    if (name && sessionId) {
+     window.location.href = `/quiz/waiting_room.html?name=${encodeURIComponent(
+      name
+     )}&sessionId=${encodeURIComponent(sessionId)}`;
+    }
+   });
+  </script>
+ </body>
+</html>
