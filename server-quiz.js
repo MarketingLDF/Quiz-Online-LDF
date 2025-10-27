@@ -19,6 +19,12 @@ scheduleMonthlyLogCleanup();
 // Serve i file statici dalla cartella "public"
 // app.use(express.static("public"));
 app.use("/quiz", express.static(path.join(__dirname, "public")));
+
+// Route per la root che reindirizza alla pagina principale
+app.get("/", (req, res) => {
+ res.redirect("/quiz/presenter.html");
+});
+
 io.attach(server, {
  path: "/quiz/socket.io",
 });
