@@ -908,7 +908,7 @@ document.addEventListener("DOMContentLoaded", () => {
   
   // Set session information
   sessionCodeSpan.textContent = currentSessionId;
-  const sessionUrl = `${window.location.origin}/quiz/waiting_room.html?sessionId=${currentSessionId}`;
+  const sessionUrl = `${window.location.origin}/quiz/lobby.html?sessionId=${currentSessionId}`;
   sessionUrlSpan.textContent = sessionUrl;
   
   // Clear previous QR code
@@ -957,51 +957,6 @@ document.addEventListener("DOMContentLoaded", () => {
    }
   }
  });
-
- function showQRCodeModal() {
-  const modal = document.getElementById("qrModal");
-  const sessionCodeSpan = document.getElementById("qrSessionCode");
-  const sessionUrlSpan = document.getElementById("qrSessionUrl");
-  const qrContainer = document.getElementById("qrCodeContainer");
-  
-  // Set session information
-  sessionCodeSpan.textContent = currentSessionId;
-  const sessionUrl = `${window.location.origin}/quiz/waiting_room.html?sessionId=${currentSessionId}`;
-  sessionUrlSpan.textContent = sessionUrl;
-  
-  // Clear previous QR code
-  qrContainer.innerHTML = "";
-  
-  // Generate QR Code
-  try {
-   qrCodeInstance = new QRCode(qrContainer, {
-    text: sessionUrl,
-    width: 400,
-    height: 400,
-    colorDark: "#2c3e50",
-    colorLight: "#ffffff",
-    correctLevel: QRCode.CorrectLevel.H
-   });
-  } catch (error) {
-   console.error("Errore nella generazione del QR Code:", error);
-   qrContainer.innerHTML = `
-    <div style="padding: 2rem; color: #dc3545;">
-     <i class="bi bi-exclamation-triangle" style="font-size: 3rem;"></i>
-     <p>Errore nella generazione del QR Code</p>
-     <p style="font-size: 0.9rem;">Assicurati che la libreria QRCode.js sia caricata</p>
-    </div>
-   `;
-  }
-  
-  // Show modal with high brightness by default
-  modal.style.display = "flex";
-  modal.classList.add("brightness-high");
-  
-  // Add fade-in animation
-  setTimeout(() => {
-   modal.style.opacity = "1";
-  }, 10);
- }
 
  function hideQRCodeModal() {
   const modal = document.getElementById("qrModal");
