@@ -9,7 +9,8 @@ const { log, scheduleMonthlyLogCleanup } = require("./logger"); // Logging perso
 // Setup iniziale
 const app = express();
 const server = http.createServer(app);
-const io = socketIO(server);
+// Un solo attach di Socket.io sul path dedicato (evita l'endpoint fantasma su /socket.io)
+const io = socketIO(server, { path: "/quiz/socket.io" });
 const PORT = 4000;
 let questionDurationPerSession = {};
 
@@ -23,10 +24,6 @@ app.use("/quiz", express.static(path.join(__dirname, "public")));
 // Route per la root che reindirizza alla pagina principale
 app.get("/", (req, res) => {
  res.redirect("/quiz/presenter.html");
-});
-
-io.attach(server, {
- path: "/quiz/socket.io",
 });
 
 // Oggetto che contiene tutte le sessioni attive
@@ -57,22 +54,23 @@ function cleanupInactiveSessions() {
     
     // Se la sessione è inattiva da più del timeout configurato
     if (timeSinceLastActivity > SESSION_TIMEOUT) {
-      sessionsToDelete.push(sessionId);
+      // Memorizzo anche il tempo di inattività per il log successivo
+      sessionsToDelete.push({ sessionId, timeSinceLastActivity });
     }
   }
-  
+
   // Rimuovi le sessioni inattive
-  sessionsToDelete.forEach(sessionId => {
+  sessionsToDelete.forEach(({ sessionId, timeSinceLastActivity }) => {
     const session = sessions[sessionId];
     const participantCount = session ? session.participants.length : 0;
-    
+
     // Pulisci tutti i dati associati alla sessione
     delete sessions[sessionId];
     delete scoreModePerSession[sessionId];
     delete selectedQuizFile[sessionId];
     delete questionDurationPerSession[sessionId];
     delete sessionLastActivity[sessionId];
-    
+
     log(`Sessione inattiva rimossa: ${sessionId} (${participantCount} partecipanti, inattiva da ${Math.round(timeSinceLastActivity / 60000)} minuti)`);
   });
   
@@ -207,6 +205,8 @@ io.on("connection", (socket) => {
    scores: {},
    currentQuestion: 0,
    quiz: [],
+   answered: new Set(), // socket.id che hanno già risposto alla domanda corrente
+   acceptingAnswers: false, // true solo mentre il tempo della domanda è attivo
   };
 
   // Aggiorna l'attività della sessione
@@ -238,9 +238,51 @@ io.on("connection", (socket) => {
   }
  });
 
- socket.on("uploadQuiz", ({ filename, content }) => {
+ socket.on("uploadQuiz", (payload) => {
+  // Validazione struttura del payload
+  if (!payload || typeof payload !== "object") {
+   socket.emit("error", "Dati di caricamento non validi");
+   return;
+  }
+  const { filename, content } = payload;
+
+  if (typeof filename !== "string" || !filename.trim()) {
+   socket.emit("error", "Nome file mancante");
+   return;
+  }
+
+  // Validazione del contenuto del quiz (stessa struttura richiesta dal client)
+  const validContent =
+   content &&
+   typeof content === "object" &&
+   typeof content.title === "string" &&
+   Array.isArray(content.questions) &&
+   content.questions.length > 0 &&
+   content.questions.every(
+    (q) =>
+     q &&
+     typeof q.question === "string" &&
+     typeof q.a === "string" &&
+     typeof q.b === "string" &&
+     typeof q.c === "string" &&
+     typeof q.d === "string" &&
+     Array.isArray(q.correct) &&
+     q.correct.length > 0 &&
+     q.correct.every((c) => ["a", "b", "c", "d"].includes(c))
+   );
+
+  if (!validContent) {
+   socket.emit("error", "Formato quiz non valido");
+   return;
+  }
+
   const dir = "./quizzes";
-  const baseName = path.basename(filename, ".json");
+  // path.basename neutralizza eventuali tentativi di path traversal
+  const baseName = path.basename(filename, ".json").replace(/[^a-zA-Z0-9_-]/g, "_");
+  if (!baseName) {
+   socket.emit("error", "Nome file non valido");
+   return;
+  }
   let finalName = baseName + ".json";
   let i = 1;
 
@@ -382,12 +424,21 @@ io.on("connection", (socket) => {
   if (!sessions[sessionId]) return;
 
   updateSessionActivity(sessionId);
-  const quizFile = selectedQuizFile[sessionId] || "quiz.json";
+  const quizFile = selectedQuizFile[sessionId];
+
+  // Nessun quiz selezionato: avvisa il presentatore invece di leggere un file inesistente
+  if (!quizFile) {
+   socket.emit("error", "Nessun quiz selezionato per questa sessione");
+   log(`Avvio quiz fallito nella sessione ${sessionId}: nessun quiz selezionato`);
+   return;
+  }
+
   const fullPath = path.join("./quizzes", quizFile);
 
   fs.readFile(fullPath, "utf8", (err, data) => {
    if (err) {
     log(`Errore nella lettura del quiz ${quizFile}: ${err.message}`);
+    socket.emit("error", `Impossibile leggere il quiz «${quizFile}»`);
     return;
    }
 
@@ -405,7 +456,9 @@ io.on("connection", (socket) => {
      duration: questionDurationPerSession[sessionId] || 60,
     });
 
-    // Invia direttamente la prima domanda
+    // Invia direttamente la prima domanda e apre la raccolta risposte
+    sessions[sessionId].answered = new Set();
+    sessions[sessionId].acceptingAnswers = true;
     io.to(sessionId).emit("questionChange", 0);
     sessions[sessionId].currentQuestion = 1;
 
@@ -431,7 +484,9 @@ io.on("connection", (socket) => {
    io.to(sessionId).emit("quizEnd");
    log(`Fine quiz per la sessione ${sessionId}`);
   } else {
-   // Altrimenti invia la nuova domanda
+   // Altrimenti invia la nuova domanda e riapre la raccolta risposte
+   session.answered = new Set();
+   session.acceptingAnswers = true;
    io.to(sessionId).emit("questionChange", index);
    session.currentQuestion++;
    log(`Domanda ${index} inviata nella sessione ${sessionId}`);
@@ -443,6 +498,8 @@ io.on("connection", (socket) => {
   if (!sessions[sessionId]) return;
 
   updateSessionActivity(sessionId);
+  // Chiude la raccolta risposte: da qui in poi nessuna risposta viene più conteggiata
+  sessions[sessionId].acceptingAnswers = false;
   io.to(sessionId).emit("forceDisable");
   log(`Timer scaduto nella sessione ${sessionId}`);
  });
@@ -456,11 +513,22 @@ io.on("connection", (socket) => {
 
    if (!question || !Array.isArray(question.correct)) continue;
 
+   if (session.scores[socket.id] === undefined) continue;
+
+   // Ignora risposte non pertinenti o malformate
+   if (!Array.isArray(selectedAnswers)) continue;
+
+   // Il partecipante appartiene a questa sessione: applica i controlli e interrompi il ciclo
+   // Tempo scaduto: non conteggiare la risposta
+   if (!session.acceptingAnswers) break;
+
+   // Ha già risposto a questa domanda: evita l'accumulo di punti
+   if (session.answered.has(socket.id)) break;
+   session.answered.add(socket.id);
+
    const correct = [...question.correct].sort().join(",");
    const received = [...selectedAnswers].sort().join(",");
    const mode = scoreModePerSession[sessionId] || "completo";
-
-   if (session.scores[socket.id] === undefined) continue;
 
    if (mode === "completo") {
     if (correct === received) {
@@ -478,7 +546,8 @@ io.on("connection", (socket) => {
      else score -= 1;
     }
 
-    const normalizedScore = Math.max(0, Math.round((score / total) * 10));
+    const normalizedScore =
+     total > 0 ? Math.max(0, Math.round((score / total) * 10)) : 0;
     session.scores[socket.id] += normalizedScore;
    }
 

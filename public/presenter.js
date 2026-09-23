@@ -195,9 +195,41 @@ document.addEventListener("DOMContentLoaded", () => {
   currentSessionId = sessionId;
  });
 
+ // Mostra un messaggio di errore al presentatore
+ function showPresenterError(message) {
+  const box = document.getElementById("errorMessage");
+  const text = document.getElementById("errorText");
+  if (text) text.textContent = message;
+  if (box) {
+   box.style.display = "block";
+   // Nasconde automaticamente dopo qualche secondo
+   clearTimeout(showPresenterError._t);
+   showPresenterError._t = setTimeout(() => {
+    box.style.display = "none";
+   }, 5000);
+  }
+ }
+
+ // Errori generici inviati dal server
+ socket.on("error", (message) => {
+  showPresenterError(typeof message === "string" ? message : "Si è verificato un errore");
+ });
+
+ // Errori specifici sulla sessione
+ socket.on("sessionError", (message) => {
+  // Se la sessione esiste già, il presentatore ne è verosimilmente il proprietario:
+  // ci si limita a rientrare senza mostrare un errore.
+  if (message === "Sessione già esistente" && currentSessionId) {
+   socket.emit("joinPresenter", currentSessionId);
+   return;
+  }
+  showPresenterError(typeof message === "string" ? message : "Errore di sessione");
+ });
+
  let presenterBubbles = [];
  let presenterAnimationId;
  let timerInterval = null;
+ let timerActive = false;
  let currentIndex = null;
  let scoreMode = "completo"; // default
 

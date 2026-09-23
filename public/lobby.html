@@ -66,11 +66,15 @@
    // Gestione click pulsante
    joinButton.addEventListener("click", () => {
     const name = nameInput.value.trim().toUpperCase();
-    if (name && sessionId) {
-     window.location.href = `/quiz/waiting_room.html?name=${encodeURIComponent(
-      name
-     )}&sessionId=${encodeURIComponent(sessionId)}`;
+    if (!sessionId) return;
+    // Allineato alla validazione del server (2–30 caratteri)
+    if (name.length < 2 || name.length > 30) {
+     alert("Il nome deve contenere tra 2 e 30 caratteri.");
+     return;
     }
+    window.location.href = `/quiz/waiting_room.html?name=${encodeURIComponent(
+     name
+    )}&sessionId=${encodeURIComponent(sessionId)}`;
    });
   </script>
  </body>

@@ -25,6 +25,21 @@ if (!sessionId) {
  }
 }
 
+// Mostra eventuali errori inviati dal server (es. nome già in uso, sessione non trovata)
+socket.on("error", (message) => {
+ const msg = typeof message === "string" ? message : "Si è verificato un errore";
+ const container = document.querySelector(".quiz-container") || document.body;
+ let banner = document.getElementById("serverError");
+ if (!banner) {
+  banner = document.createElement("div");
+  banner.id = "serverError";
+  banner.className = "alert alert-danger";
+  banner.setAttribute("role", "alert");
+  container.prepend(banner);
+ }
+ banner.textContent = msg;
+});
+
 // Array per tenere traccia delle bolle animate dei partecipanti
 let bubbles = [];
 // ID dell'animazione corrente, utile per annullare animazioni precedenti

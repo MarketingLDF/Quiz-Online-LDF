@@ -16,6 +16,21 @@ if (!name || !sessionId) {
  socket.emit("register", name, sessionId);
 }
 
+// Mostra eventuali errori inviati dal server (es. nome già in uso, sessione non trovata)
+socket.on("error", (message) => {
+ const msg = typeof message === "string" ? message : "Si è verificato un errore";
+ const container = document.querySelector(".quiz-container") || document.body;
+ let banner = document.getElementById("serverError");
+ if (!banner) {
+  banner = document.createElement("div");
+  banner.id = "serverError";
+  banner.className = "alert alert-danger";
+  banner.setAttribute("role", "alert");
+  container.prepend(banner);
+ }
+ banner.textContent = msg;
+});
+
 // Variabili globali per tracciare lo stato del quiz
 let questions = [];
 let currentIndex = null;
@@ -241,25 +256,6 @@ function showQuestion() {
  };
 
  answersEl.appendChild(submitBtn);
-}
-
-// Evidenzia le risposte selezionate dall'utente
-function highlightSelectedAnswers(letters) {
- const correctAnswers = questions[currentIndex].correct;
-
- letters.forEach((letter) => {
-  const btn = document.getElementById(`answer-${letter}`);
-  if (!btn) return;
-
-  // Rimuove stili predefiniti
-  btn.classList.remove("btn-outline-primary", "btn-secondary");
-
-  if (correctAnswers.includes(letter)) {
-   btn.classList.add("correct-answer");
-  } else {
-   btn.classList.add("wrong-answer");
-  }
- });
 }
 
 // Disabilita tutti i pulsanti delle risposte (usato dopo invio o timeout)
